@@ -41,6 +41,28 @@ function createServer(env: Env) {
   }
 
   server.registerTool(
+  "afc_anuncios",
+  {
+    description:
+      "Lista os anuncios ativos da AFC Mix no Mercado Livre, incluindo preco, estoque, quantidade vendida, tipo de anuncio e informacoes de catalogo.",
+    inputSchema: {},
+  },
+  async () => {
+    const data = await callAfcBackend(
+      "/ml/items",
+      env
+    );
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+);server.registerTool(
     "afc_conta",
     {
       description:
