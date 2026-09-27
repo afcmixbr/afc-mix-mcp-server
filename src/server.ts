@@ -64,13 +64,13 @@ function createServer(env: Env) {
     "afc_vendas",
     {
       description:
-        "Consulta vendas da AFC Mix no Mercado Livre, com faturamento, pedidos, itens, unidades físicas, ticket médio, ranking de produtos e detalhes dos pedidos.",
+        "Consulta vendas da AFC Mix no Mercado Livre, incluindo faturamento, pedidos, itens, unidades físicas, ticket médio e ranking de produtos.",
       inputSchema: {
         periodo: z
           .enum(["hoje", "ontem", "7d", "30d"])
           .default("hoje")
           .describe(
-            "Período da consulta: hoje, ontem, últimos 7 dias ou últimos 30 dias."
+            "Período: hoje, ontem, últimos 7 dias ou últimos 30 dias."
           ),
       },
     },
@@ -94,7 +94,7 @@ function createServer(env: Env) {
     "afc_comparar_vendas",
     {
       description:
-        "Compara o desempenho comercial da AFC Mix no Mercado Livre com o período anterior equivalente. Mostra faturamento, pedidos, ticket médio, itens, unidades físicas, variações e desempenho por anúncio.",
+        "Compara o desempenho comercial da AFC Mix com o período anterior equivalente, incluindo faturamento, pedidos, ticket médio e desempenho por anúncio.",
       inputSchema: {
         periodo: z
           .enum(["hoje", "7d", "30d"])
@@ -129,14 +129,8 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
-    const url = new URL(request.url);
+    const handler = createMcpHandler(() => createServer(env));
 
-    if (url.pathname !== "/mcp") {
-      return new Response("Not Found", { status: 404 });
-    }
-
-    const server = createServer(env);
-
-    return createMcpHandler(server)(request, env, ctx);
+    return handler(request, env, ctx);
   },
 };
