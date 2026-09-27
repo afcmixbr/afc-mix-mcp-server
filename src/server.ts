@@ -48,10 +48,7 @@ function createServer(env: Env) {
     inputSchema: {},
   },
   async () => {
-    const data = await callAfcBackend(
-      "/ml/items",
-      env
-    );
+   const data = await callBackend("/ml/items");
 
     return {
       content: [
