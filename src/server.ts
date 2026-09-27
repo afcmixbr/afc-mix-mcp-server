@@ -4,10 +4,8 @@ import { z } from "zod";
 
 interface Env {
   MCP_API_KEY: string;
+  AFC_BACKEND: Fetcher;
 }
-
-const BACKEND_URL =
-  "https://afc-mix-ml.alessandrafcabral2024.workers.dev";
 
 function createServer(env: Env) {
   const server = new McpServer({
@@ -16,13 +14,16 @@ function createServer(env: Env) {
   });
 
   async function callBackend(path: string) {
-    const response = await fetch(`${BACKEND_URL}${path}`, {
-      method: "GET",
-      headers: {
-        "X-API-Key": env.MCP_API_KEY,
-        Accept: "application/json",
-      },
-    });
+    const response = await env.AFC_BACKEND.fetch(
+      `https://afc-backend${path}`,
+      {
+        method: "GET",
+        headers: {
+          "X-API-Key": env.MCP_API_KEY,
+          Accept: "application/json",
+        },
+      }
+    );
 
     const text = await response.text();
 
