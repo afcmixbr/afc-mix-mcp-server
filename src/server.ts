@@ -2,26 +2,120 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 
-function createServer() {
+interface Env {
+  MCP_API_KEY: string;
+}
+
+const BACKEND_URL =
+  "https://afc-mix-ml.alessandrafcabral2024.workers.dev";
+
+function createServer(env: Env) {
   const server = new McpServer({
-    name: "Hello MCP Server",
-    version: "1.0.0"
+    name: "AFC Mix Mercado Livre",
+    version: "1.0.0",
   });
 
+  async function callBackend(path: string) {
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      method: "GET",
+      headers: {
+        "X-API-Key": env.MCP_API_KEY,
+        Accept: "application/json",
+      },
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `Erro no backend AFC Mix (${response.status}): ${text}`
+      );
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
   server.registerTool(
-    "hello",
+    "afc_conta",
     {
-      description: "Returns a greeting message",
-      inputSchema: { name: z.string().optional() }
+      description:
+        "Consulta os dados da conta da AFC Mix no Mercado Livre, incluindo identificação e reputação do vendedor.",
+      inputSchema: {},
     },
-    async ({ name }) => {
+    async () => {
+      const data = await callBackend("/ml/me");
+
       return {
         content: [
           {
-            text: `Hello, ${name ?? "World"}!`,
-            type: "text"
-          }
-        ]
+            type: "text",
+            text: JSON.stringify(data, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "afc_vendas",
+    {
+      description:
+        "Consulta vendas da AFC Mix no Mercado Livre, com faturamento, pedidos, itens, unidades físicas, ticket médio, ranking de produtos e detalhes dos pedidos.",
+      inputSchema: {
+        periodo: z
+          .enum(["hoje", "ontem", "7d", "30d"])
+          .default("hoje")
+          .describe(
+            "Período da consulta: hoje, ontem, últimos 7 dias ou últimos 30 dias."
+          ),
+      },
+    },
+    async ({ periodo }) => {
+      const data = await callBackend(
+        `/ml/orders?period=${encodeURIComponent(periodo)}`
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(data, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "afc_comparar_vendas",
+    {
+      description:
+        "Compara o desempenho comercial da AFC Mix no Mercado Livre com o período anterior equivalente. Mostra faturamento, pedidos, ticket médio, itens, unidades físicas, variações e desempenho por anúncio.",
+      inputSchema: {
+        periodo: z
+          .enum(["hoje", "7d", "30d"])
+          .default("7d")
+          .describe(
+            "Período que será comparado com o período anterior equivalente."
+          ),
+      },
+    },
+    async ({ periodo }) => {
+      const data = await callBackend(
+        `/ml/comparison?period=${encodeURIComponent(periodo)}`
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(data, null, 2),
+          },
+        ],
       };
     }
   );
@@ -30,7 +124,19 @@ function createServer() {
 }
 
 export default {
-  fetch(request, env, ctx) {
-    return createMcpHandler(createServer)(request, env, ctx);
-  }
-} satisfies ExportedHandler;
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname !== "/mcp") {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    const server = createServer(env);
+
+    return createMcpHandler(server)(request, env, ctx);
+  },
+};
