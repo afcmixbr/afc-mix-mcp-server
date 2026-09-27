@@ -4,6 +4,14 @@
   "compatibility_date": "2026-06-11",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+
+  "services": [
+    {
+      "binding": "AFC_BACKEND",
+      "service": "afc-mix-ml"
+    }
+  ],
+
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/mcp"]
